@@ -1,6 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getPdfLink } from "./pdf-links.functions";
 
 export type StatKind = "view" | "pdf_read" | "pdf_download";
 
@@ -67,11 +66,20 @@ export async function bumpStat(slug: string, kind: StatKind) {
   if (error) console.warn("stat not counted", error.message);
 }
 
-/** Short-lived link to a library PDF, issued by the website (the storage bucket is private). */
+/** Where an uploaded PDF lives in the private bucket (the admin page always stores it here). */
+export const pdfPathFor = (slug: string) => `${slug}.pdf`;
+
+/**
+ * Short-lived (10 minute) link to a library PDF. The bucket is private; visitors may sign links
+ * only for PDFs registered in the library, so this works on any host without a server key.
+ */
 export async function pdfUrl(slug: string, download: boolean) {
-  const { path } = await getPdfLink({ data: { slug, download } });
-  if (!path) throw new Error("No PDF for this novel.");
-  return `${String(import.meta.env['VITE_SUPABASE_URL']).replace(/\/+$/, "")}${path}`;
+  if (!/^[a-z0-9-]{1,200}$/.test(slug)) throw new Error("No PDF for this novel.");
+  const { data, error } = await supabase.storage
+    .from("novel-pdfs")
+    .createSignedUrl(pdfPathFor(slug), 60 * 10, download ? { download: `${slug}.pdf` } : undefined);
+  if (error || !data?.signedUrl) throw new Error("No PDF for this novel.");
+  return data.signedUrl;
 }
 
 export async function addReview(input: {

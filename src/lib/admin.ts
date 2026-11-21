@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { pdfPathFor } from "./community";
 
 export const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
@@ -65,7 +66,7 @@ export async function uploadNovelPdf(slug: string, file: File) {
     throw new Error("Only PDF files can be uploaded.");
   }
   if (file.size > MAX_PDF_BYTES) throw new Error("The PDF is larger than 50 MB.");
-  const path = `${slug}.pdf`;
+  const path = pdfPathFor(slug);
   const { error: upErr } = await supabase.storage
     .from("novel-pdfs")
     .upload(path, file, { upsert: true, contentType: "application/pdf" });

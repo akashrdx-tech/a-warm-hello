@@ -1,34 +1,90 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import logo from "@/assets/logo.png";
 
 const KEY = "nf-intro-seen";
+/** Served with the website itself so it plays on every host (Lovable or Vercel). */
+const WELCOME_AUDIO = "/media/welcome-novels-forever.mp3";
+/** How long the book animation runs before the overlay fades away (matches the CSS timings). */
+const INTRO_MS = 3800;
+/** If the browser neither starts nor blocks the sound by then, open the book without it. */
+const AUDIO_DECISION_MS = 1500;
 
-/** Book-opening intro, shown once per browser session. */
+type Phase = "pending" | "tap" | "playing" | "done";
+
+/**
+ * Book-opening intro, shown once per browser session, with the "Novels Forever mein khush
+ * aamdeed" greeting starting together with the animation. When the browser blocks sound until
+ * the visitor taps, the closed book waits on "Tap to open" and the tap starts both at once.
+ */
 export function IntroOverlay() {
-  const [show, setShow] = useState(true);
+  const [phase, setPhase] = useState<Phase>("pending");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     let seen = false;
     try {
       seen = sessionStorage.getItem(KEY) === "1";
-      sessionStorage.setItem(KEY, "1");
     } catch {
       /* ignore */
     }
     if (seen) {
-      setShow(false);
+      setPhase("done");
       return;
     }
-    const t = window.setTimeout(() => setShow(false), 3800);
-    return () => window.clearTimeout(t);
+
+    const audio = new Audio(WELCOME_AUDIO);
+    audio.preload = "auto";
+    audio.volume = 0.9;
+    audioRef.current = audio;
+
+    let decided = false;
+    const decide = (next: Phase) => {
+      if (decided) return;
+      decided = true;
+      setPhase(next);
+    };
+    audio
+      .play()
+      .then(() => decide("playing"))
+      .catch(() => decide("tap"));
+    const fallback = window.setTimeout(() => decide("playing"), AUDIO_DECISION_MS);
+
+    return () => {
+      decided = true;
+      window.clearTimeout(fallback);
+      audio.pause();
+    };
   }, []);
 
-  if (!show) return null;
+  useEffect(() => {
+    if (phase !== "playing") return;
+    try {
+      sessionStorage.setItem(KEY, "1");
+    } catch {
+      /* ignore */
+    }
+    const t = window.setTimeout(() => setPhase("done"), INTRO_MS);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  if (phase === "done") return null;
+
+  const open = () => {
+    if (phase === "tap") {
+      // Inside the tap itself, so the browser allows the sound.
+      void audioRef.current?.play().catch(() => {
+        /* sound unavailable; the book still opens */
+      });
+      setPhase("playing");
+    } else if (phase === "playing") {
+      setPhase("done");
+    }
+  };
 
   return (
     <div
-      className="intro-overlay fixed inset-0 z-[100] flex flex-col items-center justify-center bg-night"
-      onClick={() => setShow(false)}
+      className={`intro-overlay fixed inset-0 z-[100] flex flex-col items-center justify-center bg-night ${phase === "playing" ? "" : "intro-wait"}`}
+      onClick={open}
       role="presentation"
     >
       <div className="intro-book relative h-64 w-48 sm:h-80 sm:w-60">
@@ -51,12 +107,26 @@ export function IntroOverlay() {
           <span className="mt-3 font-display text-2xl text-gold">Novels Forever</span>
         </div>
       </div>
-      <h1 className="intro-title mt-10 font-display text-4xl text-gold sm:text-5xl">
-        Novels Forever
-      </h1>
-      <p className="intro-title mt-2 text-sm uppercase tracking-[0.3em] text-muted-foreground">
-        Every story, one library
-      </p>
+      {phase === "tap" ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            open();
+          }}
+          className="intro-tap mt-10 rounded-full border border-primary/60 px-7 py-3 font-display text-2xl text-gold"
+          autoFocus
+        >
+          Tap to open
+        </button>
+      ) : (
+        <>
+          <h1 className="intro-title mt-10 font-display text-4xl text-gold sm:text-5xl">Novels Forever</h1>
+          <p className="intro-title mt-2 text-sm uppercase tracking-[0.3em] text-muted-foreground">
+            Every story, one library
+          </p>
+        </>
+      )}
     </div>
   );
 }

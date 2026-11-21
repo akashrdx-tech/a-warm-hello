@@ -4,7 +4,8 @@ import { useState } from "react";
 import { ArrowRight, FileText, Headphones, MessageSquareText, Mic, Search, Users, Youtube } from "lucide-react";
 
 import heroImg from "@/assets/hero-library.jpg";
-import nadiaPhoto from "@/assets/nadia-nawaz-round.jpg.asset.json";
+/** Served with the website itself so it shows on every host (Lovable or Vercel). */
+const NADIA_PHOTO = "/media/nadia-nawaz-round.jpg";
 import { Embers } from "@/components/site/Embers";
 import { NovelCard, NovelGrid, SectionHeading } from "@/components/site/NovelCard";
 import { Stars } from "@/components/site/Stars";
@@ -375,7 +376,7 @@ function NarratorCard() {
     <div className="mt-6 flex max-w-lg items-center gap-4 rounded-2xl border border-primary/30 bg-ink/50 p-3 pr-5 shadow-gold sm:mt-8">
       <span className="relative block h-16 w-16 shrink-0 sm:h-[4.5rem] sm:w-[4.5rem]">
         <img
-          src={nadiaPhoto.url}
+          src={NADIA_PHOTO}
           alt={CHANNEL_OWNER.name}
           className="h-full w-full rounded-full object-cover object-center ring-2 ring-primary/60 ring-offset-2 ring-offset-background"
         />

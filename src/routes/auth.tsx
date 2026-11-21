@@ -118,7 +118,7 @@ function AuthPage() {
         ) : (
           <>
             <form onSubmit={submit} className="mt-4 space-y-3">
-              <Input type={mode === "signin" ? "text" : "email"} required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={mode === "signin" ? "Username" : "Email"} aria-label={mode === "signin" ? "Username" : "Email"} autoComplete="username" />
+              <Input type={mode === "signin" ? "text" : "email"} required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={mode === "signin" ? "Email or username" : "Email"} aria-label={mode === "signin" ? "Email or username" : "Email"} autoComplete="username" />
               {mode !== "forgot" && (
                 <Input type="password" required minLength={mode === "signin" ? 1 : 6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" aria-label="Password" autoComplete={mode === "signup" ? "new-password" : "current-password"} />
               )}
@@ -126,6 +126,22 @@ function AuthPage() {
                 {busy ? "Please wait…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
               </Button>
             </form>
+            <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm">
+              {mode === "signin" ? (
+                <>
+                  <button type="button" className="text-primary hover:underline" onClick={() => setMode("signup")}>
+                    Create owner account
+                  </button>
+                  <button type="button" className="text-muted-foreground hover:text-primary" onClick={() => setMode("forgot")}>
+                    Forgot password?
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="text-primary hover:underline" onClick={() => setMode("signin")}>
+                  ← Back to sign in
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
